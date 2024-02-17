@@ -1,8 +1,25 @@
 #import "RootViewController.h"
 #import <spawn.h>
+#import "../vnode/vnode.h"
+#import "../vnode/fishhook.h"
+#import "dlfcn.h"
 
 @interface RootViewController ()
 @end
+
+int jbclient_root_steal_ucred(uint64_t ucredToSteal, uint64_t *orgUcred) {
+  void* libjb = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW);
+  void *libjb_jbclient_root_steal_ucred = dlsym(libjb, "jbclient_root_steal_ucred");
+	uint64_t (*jbclient_root_steal_ucred_)(uint64_t ucredToSteal, uint64_t *orgUcred) = libjb_jbclient_root_steal_ucred;
+	return jbclient_root_steal_ucred_(ucredToSteal, orgUcred);
+}
+
+// int exec_cmd_root(const char *binary, ...) {
+//   void* libjb = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW);
+//   void *libjb_exec_cmd_root = dlsym(libjb, "exec_cmd_root");
+// 	uint64_t (*exec_cmd_root_)(const char *binary, ...) = libjb_exec_cmd_root;
+// 	return exec_cmd_root_(binary, ...);
+// }
 
 @implementation RootViewController
 
@@ -14,6 +31,12 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
+
+  setuid(0);
+	setgid(0);
+  NSLog(@"[vnode] uid: %d, gid: %d", getuid(), getgid());
+
+  
 
   _titleLabel =
       [[UILabel alloc] initWithFrame:CGRectMake(0, 50, UIScreen.mainScreen.bounds.size.width, 100)];
@@ -59,27 +82,13 @@
 
 - (void)buttonPressed:(UIButton *)sender {
   BOOL disabled = access("/var/jb/bin/bash", F_OK) == 0;
-  
-  NSString *launchPath = [NSString stringWithFormat:@"/var/jb/usr/bin/%@", NSProcessInfo.processInfo.processName];
-
-  pid_t pid;
 
   if(disabled) {
-    const char* args[] = {NSProcessInfo.processInfo.processName.UTF8String, "-s", NULL};
-    posix_spawn(&pid, [launchPath UTF8String], NULL, NULL, (char* const*)args, NULL);
-    [self waitUntilDone:pid];
-
-    const char* args2[] = {NSProcessInfo.processInfo.processName.UTF8String, "-h", NULL};
-    posix_spawn(&pid, [launchPath UTF8String], NULL, NULL, (char* const*)args2, NULL);
-    [self waitUntilDone:pid];
+    saveVnode();
+    hideVnode();
   } else {
-    const char* args[] = {NSProcessInfo.processInfo.processName.UTF8String, "-r", NULL};
-    posix_spawn(&pid, [launchPath UTF8String], NULL, NULL, (char* const*)args, NULL);
-    [self waitUntilDone:pid];
-
-    const char* args2[] = {NSProcessInfo.processInfo.processName.UTF8String, "-R", NULL};
-    posix_spawn(&pid, [launchPath UTF8String], NULL, NULL, (char* const*)args2, NULL);
-    [self waitUntilDone:pid];
+    revertVnode();
+    recoveryVnode();
   }
 
   NSString *title = access("/var/jb/bin/bash", F_OK) == 0 ? @"Enable" : @"Disable";

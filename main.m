@@ -2,8 +2,8 @@
 #import <Foundation/Foundation.h>
 #include <sys/syscall.h>
 #include <dlfcn.h>
-#include "vnode.h"
-#include "kernel.h"
+#include "vnode/vnode.h"
+#include "vnode/kernel.h"
 
 void showUsage() {
 	printf("Usage: vnodebypass [OPTION]...\n");
