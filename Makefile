@@ -2,7 +2,7 @@ GO_EASY_ON_ME = 1
 DEBUG = 0
 FINALPACKAGE = 1
 
-TARGET := iphone:clang:14.5:14.5
+TARGET := iphone:clang:15.6:14.5
 ARCHS = arm64
 
 THEOS_PACKAGE_SCHEME = rootless

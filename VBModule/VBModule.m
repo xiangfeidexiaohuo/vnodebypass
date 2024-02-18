@@ -3,6 +3,33 @@
 #import <spawn.h>
 #import <pthread.h>
 #import "../include/NSTask.h"
+#import "../vnode/kernel.h"
+
+#define POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE 1
+int posix_spawnattr_set_persona_np(const posix_spawnattr_t* __restrict, uid_t, uint32_t);
+int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t* __restrict, uid_t);
+int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restrict, uid_t);
+
+int run_as_root(const char* _file, const char** _argv) {
+  posix_spawnattr_t attr;
+  posix_spawnattr_init(&attr);
+  posix_spawnattr_set_persona_np(&attr, /*persona_id=*/99, POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE);
+  posix_spawnattr_set_persona_uid_np(&attr, 0);
+  posix_spawnattr_set_persona_gid_np(&attr, 0);
+
+  int pid = 0;
+  int ret = posix_spawnp(&pid, _file, NULL, NULL, (char *const *)_argv, NULL);
+  NSLog(@"[vbmodule] posix_spawnp ret: %d", ret);
+  if (ret) {
+    // fprintf(stderr, "failed to exec %s: %s\n", _file, strerror(errno));
+    return 1;
+  }
+  // waitUntilDone(pid);
+  int status;
+  waitpid(pid, &status, 0);
+  // NSLog(@"[vnode] child_pid: %d", child_pid);
+  return 0;
+}
 
 
 @implementation VBModule
@@ -97,30 +124,39 @@
 
             LSApplicationProxy* app = [LSApplicationProxy applicationProxyForIdentifier:@"kr.xsf1re.vnodebypass"];
             NSString *exec = app.bundleExecutable;
-            NSString *execPath = [NSString stringWithFormat:@"/var/jb/usr/bin/%@", exec];
+            NSString *execPath = [NSString stringWithFormat:@"%@/procursus/usr/bin/%@", locateJailbreakRoot(), exec];
+            // NSLog(@"[vnodeDEBUG] execPath: %@, exec: %@", execPath, exec);
+            // NSString *execPath = [NSString stringWithFormat:@"/var/jb/usr/bin/%@", exec];
             
-            
-
-            pid_t pid;
-            int status;
             if (selected) {
                 const char* args[] = {exec.UTF8String, "-s", NULL};
-                posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args, NULL);
-                waitpid(pid, &status, 0);
-                sleep(1);
+                run_as_root(execPath.UTF8String, args);
 
                 const char* args2[] = {exec.UTF8String, "-h", NULL};
-                posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args2, NULL);
-                waitpid(pid, &status, 0);
+                run_as_root(execPath.UTF8String, args2);
+
+                // const char* args[] = {exec.UTF8String, "-s", NULL};
+                // posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args, NULL);
+                // waitpid(pid, &status, 0);
+                // sleep(1);
+
+                // const char* args2[] = {exec.UTF8String, "-h", NULL};
+                // posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args2, NULL);
+                // waitpid(pid, &status, 0);
             } else {
                 const char* args[] = {exec.UTF8String, "-r", NULL};
-                posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args, NULL);
-                waitpid(pid, &status, 0);
-                sleep(1);
+                run_as_root(execPath.UTF8String, args);
 
                 const char* args2[] = {exec.UTF8String, "-R", NULL};
-                posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args2, NULL);
-                waitpid(pid, &status, 0);
+                run_as_root(execPath.UTF8String, args2);
+                // const char* args[] = {exec.UTF8String, "-r", NULL};
+                // posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args, NULL);
+                // waitpid(pid, &status, 0);
+                // sleep(1);
+
+                // const char* args2[] = {exec.UTF8String, "-R", NULL};
+                // posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args2, NULL);
+                // waitpid(pid, &status, 0);
             }
 
             [super refreshState];

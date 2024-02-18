@@ -3,6 +3,16 @@
 #include <sys/sysctl.h>
 #include "fishhook.h"
 
+typedef char io_string_t[512];
+typedef UInt32        IOOptionBits;
+typedef mach_port_t io_object_t;
+typedef io_object_t io_registry_entry_t;
+CFTypeRef
+IORegistryEntryCreateCFProperty(io_registry_entry_t entry, CFStringRef key, CFAllocatorRef allocator, IOOptionBits options);
+extern const mach_port_t kIOMainPortDefault;
+io_registry_entry_t
+IORegistryEntryFromPath(mach_port_t, const io_string_t);
+
 //set offset
 #define kCFCoreFoundationVersionNumber_iOS_15_0 (1854)
 #define kCFCoreFoundationVersionNumber_iOS_15_2 (1856.105)
@@ -160,7 +170,7 @@ static uid_t hook_getuid(void) {
 	return 0;
 }
 
-int init_kernel() {
+int init_kernel(void) {
 
   	printf("======= init_kernel =======\n");
 	libjb = dlopen("/var/jb/basebin/libjailbreak.dylib", RTLD_NOW);
@@ -171,7 +181,7 @@ int init_kernel() {
 		void *libjb_jbdInitPPLRW = dlsym(libjb, "jbdInitPPLRW");
 		int (*jbdInitPPLRW)(void) = libjb_jbdInitPPLRW;
 		int ret = jbdInitPPLRW();
-		NSLog(@"[vnode] jbdInitPPLRW ret: %d\n", ret);
+		NSLog(@"[vnodeDEBUG] jbdInitPPLRW ret: %d\n", ret);
 		if(ret != 0) {
 			return 1;
 		}
@@ -180,7 +190,7 @@ int init_kernel() {
 	did_jbdInitPPLRW = true;
 
 	ourproc = proc_find(getpid());
-	NSLog(@"[vnode] ourproc: 0x%llx\n", ourproc);
+	NSLog(@"[vnodeDEBUG] ourproc: 0x%llx\n", ourproc);
 	if(ourproc == 0) {
 		return 1;
 	}
@@ -190,6 +200,93 @@ int init_kernel() {
 		printf("offset init failed: %d\n", err);
 		return 1;
 	}
+
+	return 0;
+}
+
+NSData *bootManifestHash(void)
+{
+  io_registry_entry_t registryEntry = IORegistryEntryFromPath(kIOMainPortDefault, "IODeviceTree:/chosen");
+  if (registryEntry) {
+    return (__bridge NSData *)IORegistryEntryCreateCFProperty(registryEntry, CFSTR("boot-manifest-hash"), NULL, 0);
+  }
+  return nil;
+}
+
+NSString *hexStringFromData(NSData* data) {
+    const unsigned char *dataBuffer = (const unsigned char *)[data bytes];
+    if (!dataBuffer) return [NSString string];
+
+    NSUInteger dataLength = [data length];
+    NSMutableString *hexString = [NSMutableString stringWithCapacity:(dataLength * 2)];
+
+    for (int i = 0; i < dataLength; ++i) {
+        [hexString appendFormat:@"%02lX", (unsigned long)dataBuffer[i]];
+    }
+
+    return hexString;
+}
+
+NSString *getActivePrebootPath(void)
+{
+    return [@"/private/preboot" stringByAppendingPathComponent:hexStringFromData(bootManifestHash())];
+}
+
+//https://github.com/opa334/Dopamine/blob/2.x/Application/Dopamine/Jailbreak/DOEnvironmentManager.m#L56C1-L85C10
+NSString *locateJailbreakRoot(void)
+{
+  NSString *activePrebootPath = getActivePrebootPath();
+  
+  NSString *randomizedJailbreakPath;
+  
+  // First attempt at finding jailbreak root, look for Dopamine 2.x path
+  for (NSString *subItem in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:activePrebootPath error:nil]) {
+      if (subItem.length == 15 && [subItem hasPrefix:@"dopamine-"]) {
+          randomizedJailbreakPath = [activePrebootPath stringByAppendingPathComponent:subItem];
+          return randomizedJailbreakPath;
+      }
+  }
+  return nil;
+}
+
+uint64_t proc_ucred(uint64_t proc) {
+	void *libjb_proc_ucred = dlsym(libjb, "proc_ucred");
+	uint64_t (*proc_ucred_)(uint64_t proc) = libjb_proc_ucred;
+	return proc_ucred_(proc);
+}
+
+int get_root_by_krw(void) {
+	libjb = dlopen([NSString stringWithFormat:@"%@/procursus/basebin/libjailbreak.dylib", locateJailbreakRoot()].UTF8String, RTLD_NOW);
+	if(!did_jbdInitPPLRW) {
+		//hook getuid to 0, bypass protection when calling jbdInitPPLRW
+		rebind_symbols((struct rebinding[1]){{"getuid", (void *)hook_getuid, (void **)&orig_getuid}}, 1);
+
+		void *libjb_jbdInitPPLRW = dlsym(libjb, "jbdInitPPLRW");
+		int (*jbdInitPPLRW)(void) = libjb_jbdInitPPLRW;
+		int ret = jbdInitPPLRW();
+		if(ret != 0) {
+			return 1;
+		}
+		
+	}
+	did_jbdInitPPLRW = true;
+
+	ourproc = proc_find(getpid());
+	uint64_t ucred = proc_ucred(ourproc);
+
+	//https://github.com/opa334/Dopamine/blob/2.x/BaseBin/libjailbreak/src/info.c#L111
+	 // Get uid 0
+	 uint32_t ucred_cr_posix = 0x18;
+    //kwrite32(ourproc + 0x3C, 0);	//kwrite32(proc + koffsetof(proc, svuid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x8, 0);	//kwrite32(ucred + koffsetof(ucred, svuid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x4, 0);	//kwrite32(ucred + koffsetof(ucred, ruid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x0, 0);	//kwrite32(ucred + koffsetof(ucred, uid), 0);
+    
+    // Get gid 0
+    //kwrite32(ourproc + 0x48, 0);	//kwrite32(proc + koffsetof(proc, svgid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x50, 0);	//kwrite32(ucred + koffsetof(ucred, rgid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x54, 0);	//kwrite32(ucred + koffsetof(ucred, svgid), 0);
+    kwrite32(ucred + ucred_cr_posix + 0x10, 0);	//kwrite32(ucred + koffsetof(ucred, groups), 0);
 
 	return 0;
 }

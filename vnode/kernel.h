@@ -33,5 +33,8 @@ void kwrite64(uint64_t va, uint64_t v);
 uint64_t kread64(uint64_t va);
 uint32_t kread32(uint64_t va);
 
-int init_kernel();
+int init_kernel(void);
 bool isArm64e(void);
+int get_root_by_krw(void);
+
+NSString *locateJailbreakRoot(void);

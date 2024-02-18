@@ -14,19 +14,25 @@ void showUsage() {
 	printf("-r,  --revert           Revert jailbreak files\n");
 	printf("-R,  --recovery         To prevent kernel panic, vnode_usecount and vnode_iocount will be substracted 1 and remove /tmp/vnodeMem.txt\n");
 	printf("-c,  --check            Check if jailbreak file exists using SVC #0x80 SYS_access.\n");
+	printf("-p,  --permission       Restore chown /var/jb as root \n");
 }
+
 
 int main(int argc, char *argv[], char *envp[]) {
 	setuid(0);
 	setgid(0);
-
-	if(getuid() != 0 && getgid() != 0) {
-		printf("Require vnodebypass to be run as root!\n");
-		if(isArm64e())
-			printf("Seems like you're using Dopamine, so continue anyway.\n");
-		else
-			return -1;
+	if(getuid() != 0 || getgid() != 0) {
+		get_root_by_krw();
 	}
+
+
+	// if(getuid() != 0 && getgid() != 0) {
+	// 	printf("Require vnodebypass to be run as root!\n");
+	// 	if(isArm64e())
+	// 		printf("Seems like you're using Dopamine, so continue anyway.\n");
+	// 	else
+	// 		return -1;
+	// }
 
 	if (argc != 2) {
 		showUsage();

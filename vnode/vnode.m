@@ -77,9 +77,11 @@ void hideVnode() {
   }
 
   printf("Hide file!\n");
+  rename("/var/jb", "/var/jb2");
 }
 
 void revertVnode() {
+  rename("/var/jb2", "/var/jb");
   if (init_kernel() == 1) {
     printf("Failed init_kernel\n");
     return;
