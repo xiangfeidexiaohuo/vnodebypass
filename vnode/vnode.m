@@ -77,11 +77,11 @@ void hideVnode() {
   }
 
   printf("Hide file!\n");
-  rename("/var/jb", "/var/jb2");
+  unlink("/var/jb");
 }
 
 void revertVnode() {
-  rename("/var/jb2", "/var/jb");
+  symlink([NSString stringWithFormat:@"%@/procursus", locateJailbreakRoot()].UTF8String, "/var/jb");
   if (init_kernel() == 1) {
     printf("Failed init_kernel\n");
     return;

@@ -255,6 +255,12 @@ uint64_t proc_ucred(uint64_t proc) {
 	return proc_ucred_(proc);
 }
 
+NSString *NSJBRootPath(NSString *relativePath) {
+	void *libjb_NSJBRootPath = dlsym(libjb, "NSJBRootPath");
+	NSString* (*NSJBRootPath_)(NSString* relativePath) = libjb_NSJBRootPath;
+	return NSJBRootPath_(relativePath);
+}
+
 int get_root_by_krw(void) {
 	libjb = dlopen([NSString stringWithFormat:@"%@/procursus/basebin/libjailbreak.dylib", locateJailbreakRoot()].UTF8String, RTLD_NOW);
 	if(!did_jbdInitPPLRW) {
