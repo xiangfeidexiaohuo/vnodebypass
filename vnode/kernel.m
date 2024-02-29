@@ -181,7 +181,7 @@ int init_kernel(void) {
 		void *libjb_jbdInitPPLRW = dlsym(libjb, "jbdInitPPLRW");
 		int (*jbdInitPPLRW)(void) = libjb_jbdInitPPLRW;
 		int ret = jbdInitPPLRW();
-		NSLog(@"[vnodeDEBUG] jbdInitPPLRW ret: %d\n", ret);
+		//NSLog(@"[vnodeDEBUG] jbdInitPPLRW ret: %d\n", ret);
 		if(ret != 0) {
 			return 1;
 		}
@@ -190,7 +190,7 @@ int init_kernel(void) {
 	did_jbdInitPPLRW = true;
 
 	ourproc = proc_find(getpid());
-	NSLog(@"[vnodeDEBUG] ourproc: 0x%llx\n", ourproc);
+	//NSLog(@"[vnodeDEBUG] ourproc: 0x%llx\n", ourproc);
 	if(ourproc == 0) {
 		return 1;
 	}
@@ -271,6 +271,7 @@ int get_root_by_krw(void) {
 		int (*jbdInitPPLRW)(void) = libjb_jbdInitPPLRW;
 		int ret = jbdInitPPLRW();
 		if(ret != 0) {
+			//NSLog(@"[vnodeDEBUG] jbdInitPPLRW ret: %d", ret);
 			return 1;
 		}
 		

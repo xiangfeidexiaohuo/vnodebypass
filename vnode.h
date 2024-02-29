@@ -10,3 +10,4 @@ void hideVnode();
 void revertVnode();
 void recoveryVnode();
 void checkFile();
+int rerunAsRoot(const char* _file, const char** _argv);

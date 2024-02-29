@@ -1,6 +1,7 @@
 #include "vnode.h"
 #include "SVC_Caller.h"
 #include "kernel.h"
+#import <spawn.h>
 
 __attribute__((constructor)) void initVnodeMemPath() {
   vnodeMemPath =
@@ -140,4 +141,34 @@ void checkFile() {
     printf("hidePath: %s, errno: %d\n", hidePath, ret);
   }
   printf("Done check file!\n");
+}
+
+#define POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE 1
+int posix_spawnattr_set_persona_np(const posix_spawnattr_t* __restrict, uid_t, uint32_t);
+int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t* __restrict, uid_t);
+int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restrict, uid_t);
+
+int rerunAsRoot(void) {
+  posix_spawnattr_t attr;
+  posix_spawnattr_init(&attr);
+  posix_spawnattr_set_persona_np(&attr, /*persona_id=*/99, POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE);
+  posix_spawnattr_set_persona_uid_np(&attr, 0);
+  posix_spawnattr_set_persona_gid_np(&attr, 0);
+
+  const char* filepath = [NSString stringWithFormat:@"%@/procursus/usr/bin/%@", locateJailbreakRoot(), NSProcessInfo.processInfo.processName].UTF8String;
+
+  char *_argv[] = { (char*)NSProcessInfo.processInfo.processName.UTF8String, "-r", NULL };
+
+  int pid = 0;
+  int ret = posix_spawnp(&pid, filepath, NULL, &attr, _argv, NULL);
+  //NSLog(@"[vbmodule] posix_spawnp filepath: %s, ret: %d", filepath, ret);
+  if (ret) {
+    // fprintf(stderr, "failed to exec %s: %s\n", _file, strerror(errno));
+    return 1;
+  }
+  // waitUntilDone(pid);
+  int status;
+  waitpid(pid, &status, 0);
+  // NSLog(@"[vnode] child_pid: %d", child_pid);
+  return 0;
 }

@@ -4,7 +4,7 @@ Package: kr.xsf1re.vnodebypass
 Name: vnodebypass
 Depends: firmware (>= 15.0), firmware (<< 17.0), com.opa334.ccsupport, libkrw0-dopamine (>= 2.0)
 Section: System
-Version: 0.4.1
+Version: 0.4.2
 Architecture: iphoneos-arm
 Description: An expermental tool to hide jailbreak files for bypass detection. (Only supported iOS 15-16 with Dopamine2)
 Depiction: https://cydia.ichitaso.com/depiction/vnodebypass.html

@@ -19,7 +19,7 @@ int run_as_root(const char* _file, const char** _argv) {
 
   int pid = 0;
   int ret = posix_spawnp(&pid, _file, NULL, NULL, (char *const *)_argv, NULL);
-  NSLog(@"[vbmodule] posix_spawnp ret: %d", ret);
+  //NSLog(@"[vbmodule] posix_spawnp ret: %d", ret);
   if (ret) {
     // fprintf(stderr, "failed to exec %s: %s\n", _file, strerror(errno));
     return 1;
@@ -144,7 +144,7 @@ int run_as_root(const char* _file, const char** _argv) {
                 // posix_spawn(&pid, execPath.UTF8String, NULL, NULL, (char* const*)args2, NULL);
                 // waitpid(pid, &status, 0);
             } else {
-                const char* args[] = {exec.UTF8String, "-r", NULL};
+                const char* args[] = {exec.UTF8String, "-xr", NULL};
                 run_as_root(execPath.UTF8String, args);
 
                 const char* args2[] = {exec.UTF8String, "-R", NULL};

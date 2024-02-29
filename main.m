@@ -14,15 +14,26 @@ void showUsage() {
 	printf("-r,  --revert           Revert jailbreak files\n");
 	printf("-R,  --recovery         To prevent kernel panic, vnode_usecount and vnode_iocount will be substracted 1 and remove /tmp/vnodeMem.txt\n");
 	printf("-c,  --check            Check if jailbreak file exists using SVC #0x80 SYS_access.\n");
-	printf("-p,  --permission       Restore chown /var/jb as root \n");
+	printf("-xr,  --revert-as-root  Run revert command as root.\n");
 }
 
 
 int main(int argc, char *argv[], char *envp[]) {
+	if (argc != 2) {
+		showUsage();
+		return -1;
+	}
+
+	if((strcmp(argv[1], "-xr") == 0 || strcmp(argv[1], "--revert-as-root") == 0)) {
+		rerunAsRoot();
+		return 0;
+	}
+
 	setuid(0);
 	setgid(0);
 	if(getuid() != 0 || getgid() != 0) {
-		get_root_by_krw();
+		//NSLog(@"[vnodeDEBUG] uid: %d, gid: %d", getuid(), getgid());
+		return -1;
 	}
 
 
@@ -33,11 +44,6 @@ int main(int argc, char *argv[], char *envp[]) {
 	// 	else
 	// 		return -1;
 	// }
-
-	if (argc != 2) {
-		showUsage();
-		return -1;
-	}
 
 	if((strcmp(argv[1], "-s") == 0 || strcmp(argv[1], "--save") == 0))
 		saveVnode();

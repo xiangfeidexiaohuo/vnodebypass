@@ -9,3 +9,4 @@ void hideVnode();
 void revertVnode();
 void recoveryVnode();
 void checkFile();
+int rerunAsRoot(void);
